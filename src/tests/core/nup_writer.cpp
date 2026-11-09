@@ -205,9 +205,9 @@ class CountingNupFile final : public FileSys::VectorVfsFile {
 public:
     using VectorVfsFile::VectorVfsFile;
 
-    std::size_t Read(u8* data, std::size_t length, std::size_t offset) const override {
+    std::size_t Read(u8* dest, std::size_t length, std::size_t offset) const override {
         ++reads;
-        return VectorVfsFile::Read(data, length, offset);
+        return VectorVfsFile::Read(dest, length, offset);
     }
 
     mutable std::size_t reads{};
