@@ -1201,6 +1201,16 @@ void FileEnvironment::Deserialize(std::ifstream& file) {
     is_proprietary_driver = texture_bound == 2 || Shader::Ampere::HasNativeAddressMap(code);
 }
 
+size_t FileEnvironment::MemorySize() const {
+    const auto map_bytes = [](const auto& map) {
+        return (map.bucket_count() + 1) *
+               (sizeof(typename std::decay_t<decltype(map)>::value_type) + 2);
+    };
+    return sizeof(*this) + code.capacity() * sizeof(u64) + map_bytes(texture_types) +
+           map_bytes(texture_pixel_formats) + map_bytes(cbuf_values) +
+           map_bytes(storage_pointer_types) + map_bytes(cbuf_replacements);
+}
+
 void FileEnvironment::Dump(u64 pipeline_hash, u64 shader_hash) {
     DumpImpl(pipeline_hash, shader_hash, code, read_highest, read_lowest, initial_offset, stage);
 }
@@ -1223,6 +1233,9 @@ bool FileEnvironment::IsNativeProgram() const {
 bool FileEnvironment::IsCbufStorageBufferPointer(u32 index, u32 offset) {
     const auto it = storage_pointer_types.find(MakeCbufKey(index, offset));
     if (it == storage_pointer_types.end()) {
+        if (guess) {
+            return index == 0 ? guess->storage_pointer_bank0 : guess->storage_pointer_other;
+        }
         throw Shader::LogicError("Uncached storage pointer classification");
     }
     return it->second != 0;
@@ -1238,6 +1251,9 @@ u64 FileEnvironment::ReadInstruction(u32 address) {
 u32 FileEnvironment::ReadCbufValue(u32 cbuf_index, u32 cbuf_offset) {
     const auto it{cbuf_values.find(MakeCbufKey(cbuf_index, cbuf_offset))};
     if (it == cbuf_values.end()) {
+        if (guess) {
+            return cbuf_index == 0 ? guess->cbuf_bank0 : guess->cbuf_other;
+        }
         throw Shader::LogicError("Uncached read texture type");
     }
     return it->second;
@@ -1246,6 +1262,9 @@ u32 FileEnvironment::ReadCbufValue(u32 cbuf_index, u32 cbuf_offset) {
 Shader::TextureType FileEnvironment::ReadTextureType(u32 handle) {
     const auto it{texture_types.find(handle)};
     if (it == texture_types.end()) {
+        if (guess) {
+            return guess->texture_type;
+        }
         throw Shader::LogicError("Uncached read texture type");
     }
     return it->second;
@@ -1254,6 +1273,9 @@ Shader::TextureType FileEnvironment::ReadTextureType(u32 handle) {
 Shader::TexturePixelFormat FileEnvironment::ReadTexturePixelFormat(u32 handle) {
     const auto it{texture_pixel_formats.find(handle)};
     if (it == texture_pixel_formats.end()) {
+        if (guess) {
+            return guess->pixel_format;
+        }
         throw Shader::LogicError("Uncached read texture pixel format");
     }
     return it->second;

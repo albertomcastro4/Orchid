@@ -167,6 +167,8 @@ add_executable(yuzu
     loading_screen.cpp
     loading_screen.h
     loading_screen.ui
+    shader_warm_dialog.cpp
+    shader_warm_dialog.h
 
     main.cpp
 

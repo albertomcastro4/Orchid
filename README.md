@@ -270,6 +270,11 @@ source and author in its message.
   Graphics use the 32-lane broadcast fallback only when subgroup size 32 can be enforced for
   that stage. Compute and unsupported graphics stages retain Shuffle; Qualcomm keeps its
   existing full-subgroup fallback. Pipeline hash diagnostics are omitted.
+- [zortos293/Lichii](https://github.com/zortos293/Lichii) (Zortos): precache compute shaders
+  from RomFS archives before game start and warm cached graphics pipelines, adapted from
+  [44ac3b7def](https://github.com/zortos293/Lichii/commit/44ac3b7def),
+  [ad477ef1f4](https://github.com/zortos293/Lichii/commit/ad477ef1f4) and
+  [fd4ce24c9b](https://github.com/zortos293/Lichii/commit/fd4ce24c9b).
 
 ## License
 

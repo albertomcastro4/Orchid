@@ -113,6 +113,8 @@ add_executable(tests
     video_core/ampere_yoshi_uniform_shift.cpp
     video_core/ampere_yoshi_uniform_gather.cpp
     video_core/ampere_yoshi_cbuf_carry.cpp
+    video_core/shader_precache.cpp
+    video_core/shader_object_pool.cpp
     video_core/maxwell_shr.cpp
     video_core/ampere_release_guards.cpp
     video_core/ampere_release_f2i.cpp
