@@ -4387,14 +4387,22 @@ void MainWindow::OnGameListConvertToNup(const std::string& game_path) {
 namespace {
 /// The game's title as its loader reports it, else the file name without extension.
 QString GameTitleName(const std::string& game_path) {
-    if (const auto loader = Loader::GetLoader(
-            *QtCommon::system, QtCommon::vfs->OpenFile(game_path, FileSys::OpenMode::Read))) {
+    const auto file = Core::GetGameFileFromPath(QtCommon::vfs, game_path);
+    if (const auto loader = Loader::GetLoader(*QtCommon::system, file)) {
         std::string title;
-        if (loader->ReadTitle(title) == Loader::ResultStatus::Success) {
+        if (loader->ReadTitle(title) == Loader::ResultStatus::Success && !title.empty()) {
             return QString::fromStdString(title);
         }
     }
-    return QFileInfo(QString::fromStdString(game_path)).completeBaseName();
+    const std::filesystem::path p{Common::FS::ToU8String(game_path)};
+    if (const auto game_root = Loader::LooseGameRootFromMain(p / "main")) {
+        return QString::fromStdString(Common::FS::PathToUTF8String(game_root->filename()));
+    }
+    const QFileInfo info(QString::fromStdString(game_path));
+    if (info.isDir() && info.fileName().compare(QStringLiteral("exefs"), Qt::CaseInsensitive) == 0) {
+        return QFileInfo(info.dir().path()).completeBaseName();
+    }
+    return info.completeBaseName();
 }
 } // namespace
 

@@ -22,6 +22,7 @@
 #include "common/fs/fs_util.h"
 #include "common/fs/path_util.h"
 #include "common/logging.h"
+#include "common/string_util.h"
 #include "common/thread.h"
 #include "core/core.h"
 #include "core/file_sys/nup_container.h"
@@ -84,8 +85,11 @@ std::optional<std::string> OpenGame(Core::System& system, const fs::path& game_p
     if (filesystem == nullptr) {
         filesystem = std::make_shared<FileSys::RealVfsFilesystem>();
     }
-    const auto file =
+    auto file =
         filesystem->OpenFile(Common::FS::PathToUTF8String(game_path), FileSys::OpenMode::Read);
+    if (file == nullptr) {
+        file = Core::GetGameFileFromPath(filesystem, Common::FS::PathToUTF8String(game_path));
+    }
     if (file == nullptr) {
         return "Cannot open the game file";
     }
@@ -113,12 +117,29 @@ std::optional<std::string> OpenGame(Core::System& system, const fs::path& game_p
         if (game.loader == nullptr) {
             return "Unsupported game file format";
         }
-        FileSys::VirtualFile romfs;
-        if (game.loader->ReadRomFS(romfs) != Loader::ResultStatus::Success || romfs == nullptr) {
-            return "Cannot read the game's RomFS (are the keys installed?)";
+        // For loose deconstructed directories, check for a loose romfs directory next to exefs first
+        if (const auto file_dir = file->GetContainingDirectory()) {
+            if (const auto parent = file_dir->GetParentDirectory()) {
+                if (auto loose_romfs = parent->GetSubdirectory("romfs")) {
+                    game.romfs.push_back(std::move(loose_romfs));
+                } else {
+                    for (const auto& sub : parent->GetSubdirectories()) {
+                        if (Common::ToLower(sub->GetName()) == "romfs") {
+                            game.romfs.push_back(sub);
+                            break;
+                        }
+                    }
+                }
+            }
         }
-        if (auto dir = FileSys::ExtractRomFS(romfs)) {
-            game.romfs.push_back(std::move(dir));
+        if (game.romfs.empty()) {
+            FileSys::VirtualFile romfs;
+            if (game.loader->ReadRomFS(romfs) != Loader::ResultStatus::Success || romfs == nullptr) {
+                return "Cannot read the game's RomFS (are the keys installed?)";
+            }
+            if (auto dir = FileSys::ExtractRomFS(romfs)) {
+                game.romfs.push_back(std::move(dir));
+            }
         }
     }
     if (game.romfs.empty()) {
